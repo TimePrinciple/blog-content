@@ -26,3 +26,13 @@ refs/
 - `refs` directory stores points into commit objects in that data (branches, tags, remotes and more)
 - `HEAD` file points to the branch you currently have checked out
 - `index` file stores your staging area information
+
+## Storage Strategy
+
+All the content is stored as `tree` and `blob` objects, with `tree`s corresponding to UNIX directory entries and `blob`s corresponding more or less to `inode`s or file contents. Git normally creates a tree by taking the state of the `staging area` or `index` and writing a series of tree objects from it.
+
+Common modes for `blob`s:
+- `100644`: A normal file
+- `100755`: An executable file
+- `120000`: A symbolic link
+
