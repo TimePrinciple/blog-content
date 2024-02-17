@@ -12,6 +12,21 @@ The whole system is consisted of two parts: the `blog-content` (public repo) and
 
 ### Blogs
 
+Blogs must be written with metadata specified, or they would not be recognized by the generator. Here is a template:
+
+```yaml
+---
+# Must present
+author:
+title:
+# Optional
+cover:
+date:
+summary:
+---
+```
+
+
 ### Posts
 
 ### Records
