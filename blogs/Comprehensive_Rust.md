@@ -1,5 +1,8 @@
 ---
 date: 2024-02-05
+title: Comprehensive Rust
+author: Ruoqing He
+summary: A condensed note of Google's Rust course developed by its Android team. Noted for describing the benefits/advantages of learning Rust and its illuminating concepts.
 ---
 
 Rust uses macros for situations where a variable number of arguments is needed (no *function overloading* and *default arguments*)

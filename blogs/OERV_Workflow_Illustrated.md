@@ -1,5 +1,8 @@
 ---
 date: 2024-02-08
+title: OERV Workflow Illustrated
+author: Ruoqing He
+summary: A guide for beginners freshly join the OERV team.
 ---
 
 

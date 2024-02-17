@@ -1,5 +1,8 @@
 ---
 date: 2024-02-05
+title: Git Internals
+author: Ruoqing He
+summary: Inner logic of Git server-side, noted for `mega`'s `fuse` submodule.
 ---
 
 # Git Internals
