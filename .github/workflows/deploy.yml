@@ -1,0 +1,39 @@
+name: deploy
+
+on:
+  push:
+    branches: ["master"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: wget https://github.com/TimePrinciple/blog-content/releases/download/experimental/blog-generator && chmod +x blog-generator && ./blog-generator
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./output/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: generate
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
