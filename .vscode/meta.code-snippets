@@ -1,0 +1,30 @@
+{
+	"Meta": {
+		"scope": "markdown",
+		"prefix": "metadata",
+		"body": [
+			"---",
+			"# Must present"
+			"author: $1",
+			"title: ${TM_FILENAME_BASE/[_-]/ /g}",
+			"# Optional",
+			"cover: $2",
+			"date: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+			"summary: $3",
+			"---",
+		],
+		"description": "Metadata needed for blog-generartor"
+	},
+	"Date": {
+		"scope": "markdown",
+		"prefix": "date",
+		"body": "date: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+		"description": "Date needed for blog-generartor"
+	},
+	"Title": {
+		"scope": "markdown",
+		"prefix": "title",
+		"body": "title: ${TM_FILENAME_BASE/[_-]/ /g}",
+		"description": "Title needed for blog-generartor"
+	}
+}
