@@ -77,7 +77,7 @@ Normally, when a user try to mount a repository hosted on a mega server, he/she 
 $ mega-fuse --mount-point <path/to/mount-point> --cache-dir <path/to/cache> --log-dir <path/to/log> --mega-url <url> connect <repo_name>
 ```
 
-this command will start a process which does the preparation, mounting, and starts another process which is to be *re-parent*ed to `init` (which means the process is to be a daemon), then exit. After the command returns, the `<path/to/mount-point>` will be available, and content of that repo is accessible thereafter.
+this command will start a process does the preparation, mounting, and starts another process which is to be *re-parent*ed to `init` (daemonize the process), then exit. After the command returns, the `<path/to/mount-point>` will be available, and content of that repo is accessible thereafter.
 
 If the user want to unmount the repository, the proper way to do it is by issuing:
 
