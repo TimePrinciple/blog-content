@@ -91,5 +91,10 @@ thus additional procedures, like cleaning and etc. can take place.
 
 `mega-fuse` uses `mega`'s [*git objects retrieval API*](https://github.com/web3infra-foundation/mega/blob/main/docs/api.md#git-objects-retrieval-api). Typically, these APIs support the basic retrieval of directories and files in repositories.
 
-For a repository to be available locally, despite the content, the tree (i.e. the directory) is to be fetched first.
+For a repository to be available locally, despite the content, the tree (i.e. the directory) is to be fetched first. The tree is lived in memory from then on, instead of directly cached to somewhere (since the content of each file is yet fetched). Operations issued be kernel to retrieve content of specific file would cause the file to be fetched in memory first.
 
+??? When to land the content on disk (write into cache)? It an optimization, to be addressed later.
+
+#### MegaClient
+
+Since all the contents are fetched from a running *mega server*, there should be a part of code handling the logic of comprising, sending a `Request`, receiving the `Response` and etc. The `MegaClient` module is designed for this purpose. It uses a long held TCP connection to its server to reduce the overhead of repeated "negotiations" before actual transmission. With that said, the `Request`s could be handle most efficiently, and in an asynchronous way.
