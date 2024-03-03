@@ -92,6 +92,20 @@ While waiting for votes, a candidate may receive an `AppendEntries` RPC from ano
 
 A candidate neither wins nor loses the election: if many followers become candidates at the same time, votes could be split so that no candidate obtains a majority. When this happens, each candidate will time out and start a new election by incrementing its term and initiating another round of `RequestVote` RPC. However, without extra measures split votes could repeat indefinitely.
 
+Raft uses randomized election timeouts to ensure that split votes are rare and that they are resolved quickly. To prevent split votes in the first place, election timeouts are chosen randomly from a fixed interval (e.g., 150-300ms). This spreads out the servers so that in most cases only a single server will time out; it wins the election and sends heartbeats before any other servers timeout.
+
+The same mechanism is used to handle split votes. Each candidate restarts its randomized election timeout at the start of an election, and it waits for that timeout to elapse before starting the next election; this reduces the likelihood of another split vote in the new election.
+
+### Log Replication
+
+Once a leader has been elected, it begins servicing client requests. Each client request contains a command to be executed by the replicated state machines. The leader appends the command to its log as a new entry, then issues `AppendEntries` RPC in parallel to each of the other servers to replicate the entry. When the entry has been safely replicated, the leader applies the entry to its state machine and returns the result of that execution to the client. If followers crash or run slowly, or if network packets are lost, the leader retries `AppendEntries` RPC indefinitely (even after it has responded to the client) until all followers eventually store all log entries.
+
+Each log entry stores a state machine command along with the term number when the entry was received by the leader. The term numbers in log entires are used to detect inconsistencies between logs and to ensure some of the properties. Each log entry also has an integer index identifying its position in the log.
+
+The leader decides when it is safe to apply a log entry to the state machines; such an entry is called *committed*. Raft guarantees that committed entries are durable and will eventually be executed by all of the available state machines. A log entry is committed once the leader that created the entry has replicated it on a majority of the servers. This also commits all preceding entries in the leader's log, including entries created by previous leaders.
+
+The leader keeps track of the highest index it knows to be committed, and it includes that index in future `AppendEntries` RPC (including heartbeats) so that the other servers eventually find out. Once a follower leans that a log entry is committed, it applies the entry to its local state machine (in log order).
+
 ## Replicated State Machines
 
 Consensus algorithms typically arise in the context of *replicated state machines*. In this approach, state machines on a collection of servers compute identical copies of the same state and can continue operating even if some of the servers are down. Replicated state machines are used to solve a variety of **fault tolerance** problems in distributed systems.
