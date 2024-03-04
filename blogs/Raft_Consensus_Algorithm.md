@@ -106,6 +106,27 @@ The leader decides when it is safe to apply a log entry to the state machines; s
 
 The leader keeps track of the highest index it knows to be committed, and it includes that index in future `AppendEntries` RPC (including heartbeats) so that the other servers eventually find out. Once a follower leans that a log entry is committed, it applies the entry to its local state machine (in log order).
 
+The Raft log mechanism is designed to maintain a high level of coherency between the logs on different servers. Not only does this simplify the system's behavior and make it more predictable, but it is an important component of ensuring safety. Raft maintains the following properties, which together constitute the `Log Matching Property`:
+
+- If two entries in different logs have the same index and term, then they store the same command.
+- If two entries in different logs have the same index and term, then the logs are identical in all preceding entries.
+
+The first property follows from the fact that a leader creates at most one entry with a given log index in a given term, and log entries never change their position in the log.
+
+The second property is guaranteed by a simple *consistency check* performed by `AppendEntries`. When sending an `AppendEntries` RPC, the leader includes the **index** and **term** of the entry in its log that **immediately precedes** the new entries. If the follower does not find an entry in its log with the same index and term, then it refuses the new entries. The consistency check acts as an induction step: the initial empty state of hte logs satisfies the Log Matching Property, and the consistency check preserves the Log Matching Property whenever logs are extended. As a result, whenever `AppendEntries` returns successfully, the leader knows that the follower's log is identical to its own log up through the new entries.
+
+#### Inconsistency Handling
+
+In Raft, the leader handles inconsistencies by forcing the follower's logs to duplicate its own. This means that conflicting entries in follower logs will be overwritten with entries from the leader's log.
+
+To bring a follower's log into consistency with its own, the leader must find the latest log entry where the two logs agree, delete any entries in the follower's log after that point ,and send the follower all of the leader's entries after that point. All of these actions happen in response to the consistency check performed by `AppendEntries` RPC. The leader maintains a `nextIndex` for each follower, which is the index of the next log entry the leader will send to that follower. When a leader first comes to power, it initializes all `nextIndex` values to the index just after the last one in its log. If a follower's log is inconsistent with the leader's, the `AppendEntries` consistency check will fail in the next `AppendEntries` RPC. After a rejection, the leader decrements `nextIndex` and retries the `AppendEntries` RPC. Eventually `nextIndex` will reach a point where the leader and follower logs match. When this happens, `AppendEntries` will succeed, which removes any conflicting entries in the follower's log and appends entries from the leader's log (if any). Once `AppendEntries` succeeds, the followers's log is consistent with the leader's, and it will remain that way for the rest of hte term.
+
+If desired, the protocol can be optimized to reduce the number of rejected `AppendEntries` RPCs. For example, when rejecting an `AppendEntries` request, the follower can include the term of the conflicting entry and the first index it stores for that term. With this information, the leader can decrement `nextIndex` to bypass all of the conflicting entries in that term; one `AppendEntries` RPC will be required for each term with conflicting entries, rather than one RPC per entry. In practice, we doubt this optimization is necessary, since failures happen infrequently and it is unlikely that there will be many inconsistent entries.
+
+With this mechanism, a leader does not need to take any special actions to restore log consistency when it comes to power. It just begins normal operation, and the logs automatically converge in response to failures of the `AppendEntries` consistency check. A leader never overwrites or deletes entries in its own log (the Leader Append-Only Property).
+
+### Safety
+
 ## Replicated State Machines
 
 Consensus algorithms typically arise in the context of *replicated state machines*. In this approach, state machines on a collection of servers compute identical copies of the same state and can continue operating even if some of the servers are down. Replicated state machines are used to solve a variety of **fault tolerance** problems in distributed systems.
