@@ -148,6 +148,24 @@ Raft never commits log entries from previous terms by counting replicas. Only lo
 
 Raft incurs this extra complexity in the commitment rules because log entries retain their original term numbers when a leader replicates entries from previous terms. In other consensus algorithms, if a new leader re-replicates entries from prior "terms", it must do so with its new "term number". Raft's approach makes it easier to reason about log entries, since they maintain the same number over time and across logs. In addition, new leaders in Raft send fewer log entries from previous terms than in other algorithms (other algorithms must send redundant log entries to renumber them before they can be committed).
 
+#### Safety Argument
+
+Given the complete Raft algorithm, we can now argue more precisely that the Leader Completeness Property holds (this argument is based on the safety proof). We assume that the Leader Completeness Property does not hold, then we prove a contradiction. Suppose the leader for term T (leader[T]) commits a log entry from its term, but that log entry is not stored by the leader of some future term. Consider the smallest term U > T whose leader (leader[U]) does not store the entry.
+
+1. The committed entry must have been absent from leader[U]'s log at the time of its election (leaders never delete or overwrite entries).
+2. Leader[T] replicated the entry on a majority of the cluster, and leader[U] received votes from a majority of the cluster. Thus, at least one server ("the voter") both accepted the entry from leader[T] and voted for leader[U]. The voter is key to reaching a contradiction.
+3. The voter must have accepted the committed entry from leader[T] *before* voting for leader[U]; otherwise it would have rejected the `AppendEntries` request from leader[T] (its current term would have been higher than T).
+4. The voter still stored the entry when it voted for leader[T], since every intervening leader contained the entry (by assumption), leaders never remove entries, and followers only remove entries if they conflict with the leader.
+5. The voter granted its vote to leader[T], so leader[U]'s log must have been as up-to-date as the voter's. This leads to one of two contradictions.
+6. First, if the voter and leader[U] shared the same last log term, then leader[U]'s log must have been at least as long as the voter's, so its log contained every entry in the voter's log. This is a contradiction, since the voter contained the committed entry and leader[U] was assumed not to.
+7. Otherwise, leader[U]'s last log term must have been larger than the voter'. Moreover, it was larger than T, since the voter's last log term was at least T (it contains the committed entry from term T). The earlier leader that created leader [U]'s last log entry must have contained the committed entry in its log (by assumption). Then, by the Log Matching Property, leader[U]'s log must also contain the committed entry, which is a contradiction.
+8. This completes the contradiction. Thus, the leaders of all terms greater than T must contain all entries from term T that are committed in term T.
+9. The Log Matching Property guarantees that future leaders will also contain entries that are committed indirectly.
+
+Given the Leader Completeness Property, the State Machine Safety Property can be proved, which states that if a server has applied a log entry at a given index to its state machine, no other server will ever apply a different log entry for the same index. At the time a server applies a log entry to its state machine, its log must be identical to the leader's log up through that entry and the entry must be committed. Now consider the lowest term in which any server applies a given log index; the Log Completeness Property guarantees that the leaders for all higher terms will store that same log entry, so servers that apply the index in later terms will apply the same value. Thus, the State Machine Safety Property holds.
+
+Finally, Raft requires servers to apply entries in log index order. Combined with the State Machine Safety Property, this means that all severs will apply exactly the same set of log entries to their state machines, in the same order.
+
 ## Replicated State Machines
 
 Consensus algorithms typically arise in the context of *replicated state machines*. In this approach, state machines on a collection of servers compute identical copies of the same state and can continue operating even if some of the servers are down. Replicated state machines are used to solve a variety of **fault tolerance** problems in distributed systems.
