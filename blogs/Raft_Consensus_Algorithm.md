@@ -127,6 +127,27 @@ With this mechanism, a leader does not need to take any special actions to resto
 
 ### Safety
 
+The mechanisms described so far are not quite sufficient eo ensure that each state machine executes exactly the same commands in the same order. For example, a follower might be unavailable while the leader commits several log entries, then it could be elected leader and overwrite these entries with new ones; as a result, different state machines might execute different command sequences.
+
+This section completes the Raft algorithm by adding a restriction on which servers may be elected leader. The restriction ensures that the leader for any given term contains all of the entries committed in previous terms (the Leader Completeness Property).
+
+#### Election restriction
+
+In any leader-based consensus algorithm, the leader must eventually store all of hte committed log entries. Raft uses a simpler approach where it guarantees that all the committed entries from previous terms are present on each new leader from the moment of its election, without the need to transfer those entries to the leader. This means that log entries only flow in one direction, from leaders to followers, and leaders never overwrite existing entries in their logs. Raft uses the voting process to prevent a candidate from winning an election unless **its log contains all committed entires**. A candidate must contact a majority of the cluster in order to be elected, which means that every committed entry must be present in at least one of those servers. If the candidate's log is at least as up-to-date as any other log in that majority, then it will hold all the committed entries. The `RequestVote` RPC implements this restriction: the RPC includes information about the candidate's log, and the voter denies its its vote if its own log is more up-to-date than that of the candidate.
+
+Raft determines which of two logs is more up-to-date by comparing the index and term of the last entries in the logs:
+
+- If the logs have last entries with different term, then the log with the later term is more up-to-date
+- If the logs end with the same term, then whichever log is longer is more up-to-date.
+
+#### Committing Entries from Previous Terms
+
+A leader knows that an entry from its current term is committed once that entry is stored on a majority of the servers. If a leader crashes before committing an entry, future leaders will attempt to finish replicating the entry. However, a leader cannot immediately conclude that an entry from a previous term is committed once it is stored on a majority of servers.
+
+Raft never commits log entries from previous terms by counting replicas. Only log entires from the leader's current term are committed by counting replicas; once an entry from the current term has been committed in this way, then all prior entries are committed indirectly because of the Log Matching Property. There are some situations where a leader could safely conclude that an older log entry is committed (e.g. if that entry is stored on every server), but Raft takes a more conservative approach for simplicity.
+
+Raft incurs this extra complexity in the commitment rules because log entries retain their original term numbers when a leader replicates entries from previous terms. In other consensus algorithms, if a new leader re-replicates entries from prior "terms", it must do so with its new "term number". Raft's approach makes it easier to reason about log entries, since they maintain the same number over time and across logs. In addition, new leaders in Raft send fewer log entries from previous terms than in other algorithms (other algorithms must send redundant log entries to renumber them before they can be committed).
+
 ## Replicated State Machines
 
 Consensus algorithms typically arise in the context of *replicated state machines*. In this approach, state machines on a collection of servers compute identical copies of the same state and can continue operating even if some of the servers are down. Replicated state machines are used to solve a variety of **fault tolerance** problems in distributed systems.
