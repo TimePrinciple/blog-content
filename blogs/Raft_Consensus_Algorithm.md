@@ -166,6 +166,27 @@ Given the Leader Completeness Property, the State Machine Safety Property can be
 
 Finally, Raft requires servers to apply entries in log index order. Combined with the State Machine Safety Property, this means that all severs will apply exactly the same set of log entries to their state machines, in the same order.
 
+#### Follower and Candidate Crashes
+
+Follower and candidate crashes are much simpler to handle than leader crashes, and they are both handled in the same way. If a follower or candidate crashes, then future `RequestVote` and `AppendEntries` RPCs sent to it will fail. Raft handles these failures by retrying indefinitely; if the crashed server restarts, then the RPC will complete successfully. If a server crashes after completing an RPC but before responding, then it will receive the same RPC again after it restarts. Raft RPCs are idempotent, so this causes no harm, For example, if a follower receives an `AppendEntries` request that includes log entries already present in its log, it ignores those entries in the new request.
+
+#### Timing and Availability
+
+One of our requirements for Raft is that safety must not depend on timing: the system must not produce incorrect results just because some event happens more quickly or slowly than expected. However, availability(the ability of the system to respond to clients in a timely manner) must inevitably depend on timing. For example, if message exchanges take longer than the typical time between server crashes, candidates will not stay up long enough to win an election; without a steady leader, Raft cannot make progress.
+
+Leader election is the aspect of Raft where timing is most critical. Raft will be able to elect and maintain a steady leader as long as the system satisfies the following *timing requirement*:
+
+*broadcast time*  << *election timeout* << *MTBF*
+
+In this inequality:
+- *broadcast time* is the average time it takes a server to send RPCs in parallel to every server in the cluster and receive their responses.
+- *election timeout* is the election timeout which is randomized.
+- *MTBF* is the average time between failures for a single server.
+
+The broadcast time should be an order of magnitude less than the election timeout so that leaders can reliably send the heartbeat messages required to keep followers from starting elections; given the randomized approach used for election timeouts, this inequality also makes split votes unlikely. The election timeout should be a few orders of magnitude less than MTBF so that the system makes steady progress. When the leader crashes, the system will be unavailable for roughly the election timeout; we would like this to represent only a small fraction of overall time.
+
+The broadcast time and MTBF are properties of the underlying system, while the election timeout is something we must choose. Raft's RPCs typically require the recipient to persist information to stable storage, so the broadcast time may range from 0.5ms to 20ms, depending on storage technology. As a result, the election timeout is likely to be somewhere between 10ms and 500ms. Typical server MTBFs are several months or more, which easily satisfies the timing requirement.
+
 ## Replicated State Machines
 
 Consensus algorithms typically arise in the context of *replicated state machines*. In this approach, state machines on a collection of servers compute identical copies of the same state and can continue operating even if some of the servers are down. Replicated state machines are used to solve a variety of **fault tolerance** problems in distributed systems.
