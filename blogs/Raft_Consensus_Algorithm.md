@@ -187,6 +187,18 @@ The broadcast time should be an order of magnitude less than the election timeou
 
 The broadcast time and MTBF are properties of the underlying system, while the election timeout is something we must choose. Raft's RPCs typically require the recipient to persist information to stable storage, so the broadcast time may range from 0.5ms to 20ms, depending on storage technology. As a result, the election timeout is likely to be somewhere between 10ms and 500ms. Typical server MTBFs are several months or more, which easily satisfies the timing requirement.
 
+### Cluster Membership Changes
+
+Up until now the cluster *configuration* (the set of servers participating in the consensus algorithm) is fixed. In practice, it will occasionally be necessary to change the configuration, for example to replace servers when they fail lor to change the degree of replication. Although this can be done by taking the entire cluster off-line, updating configuration files, and then restarting the cluster, this would leave the cluster unavailable during the changeover. In addition, if there are any manual steps, they risk operator error.
+
+For the configuration change mechanism to be safe, there must be no point during the transition where it is possible for two leaders to be elected for the same term. Unfortunately, any approach where servers switch directly from the old configuration to the new configuration is unsafe. It isn't possible to atomically switch all of the servers at once, so the cluster can potentially split into two independent majorities during the transition.
+
+In order to ensue safety, configuration changes must use a two-phase approach. There are a variety of ways to implement the two phases. For example, some systems use first phases to disable the old configuration so it cannot process client requests; then the second phase enables the new configuration. In Raft the cluster first switches to a transitional configuration we call *joint consensus*; once the joint consensus has been committed, the system then transitions to the new configuration. The joint consensus combines both the old and new configurations:
+
+- Log entries are replicated to all servers in both configurations.
+- Any server from either configuration may serve as leader.
+- Agreement (for elections and entry commitment) requires separate majorities fom *both* the old and new configurations.
+
 ## Replicated State Machines
 
 Consensus algorithms typically arise in the context of *replicated state machines*. In this approach, state machines on a collection of servers compute identical copies of the same state and can continue operating even if some of the servers are down. Replicated state machines are used to solve a variety of **fault tolerance** problems in distributed systems.
