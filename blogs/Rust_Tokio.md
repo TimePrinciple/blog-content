@@ -87,3 +87,24 @@ When `Runtime` is set, the asynchronous tasks now have environments to get execu
 #### Context Switching
 
 To execute tasks, we'll need to be in an async context.
+
+## tokio Task Communication
+
+*Message passing* is the primarily used strategy between the asynchronous tasks of tokio. It could be generally understood as there is a sender task and an according receiver task during the communication. The benefits of message passing are avoid data sharing between concurrent tasks which eliminates data racing.
+
+`channel` is used for message passing. tokio offers different kinds of `channel`s:
+
+- `oneshot`: One to one. Only one message is allow to be sent.
+- `mpsc`: Many to one. There could be multiple senders (producer), but only one receiver (consumer).
+- `broadcast`: Many to many. There could be multiple senders, and multiple receivers.
+- `watch`: One to many. There could be only one sender, but multiple receivers (subscriber).
+
+## tokio Task Synchronization
+
+When writing asynchronous tasks, there are times we need to inspect the status between tasks. tokio offers the following synchronization primitives:
+
+- Mutex: operates on a guaranteed FIFO basis. This means that the order in which tasks call the `lock` method is the exact order in which they will acquire the lock.
+- RwLock: allows a number of readers or at most one writer at any point in time. The priority policy is *fair* or (*write-preferring*), in order to ensure that readers cannot starve writes. Fairness is ensured using a **first-in, first-out** queue for the tasks awaiting the lock; if a task that wishes to acquire the write lock is at the head of the queue, read locks will not be given out until the write lock has been released. This is in contrast to the Rust standard library's `std::sync::RwLock`, where the priority policy is dependent on the operating system's implementation.
+- Notify: provides a basic mechanism to notify a single task of an event. `Notify` itself does not carry any data. Instead, it it to be used to signal another task to perform an operation.
+- Barrier: A barrier enables multiple tasks to synchronize the beginning of some computation.
+- Semaphore: maintains a set of permits. Permits are used to synchronize access to a shared resource. A semaphore differs from a mutex in that it can allow more than one concurrent caller to access the shared resource at a time.
