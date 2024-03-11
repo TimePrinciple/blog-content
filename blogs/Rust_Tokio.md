@@ -99,6 +99,30 @@ To execute tasks, we'll need to be in an async context.
 - `broadcast`: Many to many. There could be multiple senders, and multiple receivers.
 - `watch`: One to many. There could be only one sender, but multiple receivers (subscriber).
 
+### One Shot
+
+```Rust
+tokio::spawn(async move {
+    tokkio::select! {
+        // closed() is invoked by the sender to detect whether the
+        // receiver on the other side is now closed.
+        _ = tx.closed() => {
+            // The receiver is now closed (usually client), then
+            // there are nothing needed to be done, it is safe to 
+            // cancel tasks used for computing response to the
+            // receiver.
+        }
+        value = compute() => {
+            // The computation required is now complete, send the
+            // result to receiver
+            let _ = tx.send(value);
+            // It is possible the transmission fails at this point,
+            // the handling logic is ignored for now
+        }
+    }
+})
+```
+
 ## tokio Task Synchronization
 
 When writing asynchronous tasks, there are times we need to inspect the status between tasks. tokio offers the following synchronization primitives:
