@@ -65,6 +65,10 @@ Recommended reading: [OSC-Documentation](https://en.opensuse.org/openSUSE:OSC)
 
 Repositories in `src-openEuler` and `openEuler` are managed here. These repos are not created manually, but a corresponding update of the `.yaml`s of the right *SIG*. It's recommended to reference the merged PRs to get insights on how to write a proper PR for needs. It would be needed and a prerequisite if trying to import new softwares/packages.
 
+### [openeuler-sig-riscv/mirrors](https://mirror.iscas.ac.cn/openeuler-sig-riscv/openEuler-RISC-V/preview/)
+
+This is the place where the components needed for booting a virtual RISC-V environment would be found. Simply download according files, `unzstd` the `.qcow2` then run `start_vm.sh`.
+
 ## Workflow
 
 Since the changes to complete a task eventually go to the repository under `src-openEuler`, the adopted approach is to directly clone the corresponding repo on target architecture and work on it. The following steps may provide insights on what's going wrong:
