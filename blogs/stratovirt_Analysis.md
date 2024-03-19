@@ -90,8 +90,6 @@ Before make `StratoVirt` to work on riscv64, it must be able to compile in advan
 
 Through `kvm_bindings` crate, the C structures could be directly used in Rust code. And these structures include necessary fields of virtualized vms, vcpus, devices and interrupt-chips.
 
-## Project Layout
-
 ## Execution Logic
 
 ### Establish Connection to KVM
@@ -195,3 +193,17 @@ StratoVirt
  ...
 ```
 
+### Create Other Resources
+
+There are more operations needed to be done according to configuration trough KVM APIs:
+
+- `KVM_CREATE_PIT2` and `KVM_CREATE_IRQCHIP`: due to KVM by default implements almost no I/O devices itself and instead leaves that to `StrartoVirt`. But there are exceptions to this, most importantly controllers. Interrupt controllers are emulated by the hypervisor itself, presumably for performance reasons.
+- `KVM_SET_USER_MEMORY_REGION`: This operations allows `StrartoVirt` to map memory into the VM's guest "physical" `AddressSpace`. All the vCPUs of that VM shares the same address space. In short, providing VM with host-physical memory (in a viable way) is to allocate memory in `StrartoVirt` and passing KVM a pointer to it, with page-aligned.
+- CPU related `REGS`, `FPU`, `MSR` (x86_64 specific) and etc., fields needed to control each vCPU.
+- `KVM_CREATE_DEVICE`: create other devices.
+
+### Start VM
+
+The vCPUs begins work at each call to `KVM_RUN` on that vCPU's `vcpu_fd`, and this call is blocking. While blocking, the VM actually advances with the execution of vCPUs, it does not return until KVM traps back to `StrartoVirt` due to some event occurring that requires `StrartoVirt` to deal with, Most notably, page-fault. With the provided exit code of `kvm_vcpu_exec`, `StrartoVirt` resolves these exit code, and put that vCPU back to work until it can not proceed any further.
+
+Besides, given that the call is blocking, `StrartoVirt` would have a dedicated thread named `CPUThreadWorker` to supervise the execution, and updates the according `CPU` structures accordingly.
