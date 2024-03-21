@@ -31,6 +31,8 @@ summary:
 
 ### Records
 
+Records are designed to be key-value pairs of knowledges. They will be used by the search engine introduced by `blog-generator` to provide a knowledge base.
+
 ### Thoughts
 
 A directory to be ignored by `blog-generator` other than this repository. This directory is meant to record the above types of contents which is still at primitive stage, and may or may not be completed then migrated to published folders.
