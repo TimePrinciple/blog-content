@@ -4,7 +4,7 @@
 		"prefix": "metadata",
 		"body": [
 			"---",
-			"# Must present"
+			"# Must present",
 			"author: $1",
 			"title: ${TM_FILENAME_BASE/[_-]/ /g}",
 			"# Optional",
@@ -16,13 +16,19 @@
 		"description": "Metadata needed for blog-generartor"
 	},
 	"Date": {
-		"scope": ["markdown", "yaml"],
+		"scope": [
+			"markdown",
+			"yaml"
+		],
 		"prefix": "date",
 		"body": "date: ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
 		"description": "Date needed for blog-generartor"
 	},
 	"Title": {
-		"scope": ["markdown", "yaml"],
+		"scope": [
+			"markdown",
+			"yaml"
+		],
 		"prefix": "title",
 		"body": "title: ${TM_FILENAME_BASE/[_-]/ /g}",
 		"description": "Title needed for blog-generartor"
